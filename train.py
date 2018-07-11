@@ -4,6 +4,9 @@ from data import CreateDataLoader
 from models import create_model
 from util.visualizer import Visualizer
 
+# python train.py --dataroot ./datasets/facades --name facades_pix2pix --model pix2pix --which_direction BtoA
+# python train.py --dataroot ./datasets/nyu_v2 --name nyu_v2_pix2pix --model pix2depth --dataset_mode image_depth --output_nc 1
+
 if __name__ == '__main__':
     opt = TrainOptions().parse()
     data_loader = CreateDataLoader(opt)
@@ -30,6 +33,8 @@ if __name__ == '__main__':
             epoch_iter += opt.batchSize
             model.set_input(data)
             model.optimize_parameters()
+            # import sys
+            # sys.exit(0)
 
             if total_steps % opt.display_freq == 0:
                 save_result = total_steps % opt.update_html_freq == 0

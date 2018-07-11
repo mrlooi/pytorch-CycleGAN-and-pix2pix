@@ -101,8 +101,10 @@ class Visualizer():
                     label_html = '<table>%s</table>' % label_html
                     self.vis.text(table_css + label_html, win=self.display_id + 2,
                                   opts=dict(title=title + ' labels'))
-                except ConnectionError:
-                    self.throw_visdom_connection_error()
+                except Exception, e:
+                    print("Visdom EXCEPTION: %s"%e)
+                    exit(1)
+                    # self.throw_visdom_connection_error()
 
             else:
                 idx = 1
