@@ -1,0 +1,111 @@
+NYU Depth V2 Dataset Matlab Toolbox
+Authors: Nathan Silberman, Pushmeet Kohli, Derek Hoiem, Rob Fergus
+
+*************************
+RETRIEVING THE ACCEL DATA
+*************************
+To compile the get_accel_data function, you must alter compile.m with the
+absolute location of the libFreenect include directory. Once compile,
+get_accel_data.mex* can be called to extract the accelerometer data from the 
+*.a files in each scene dump directory.
+
+
+*************************
+RETRIEVING THE POINTCLOUD DATA
+*************************
+
+
+************************* 
+From resized depth image, normalized to max 10 meters
+*************************
+% imgDepth = imread('./epoch024_fake_B.png');
+imgDepth = imread('./epoch068_fake_B.png');
+imgDepthG = rgb2gray(imgDepth);
+imgDepthR = imresize(imgDepthG, [480 640]);
+imgDepthR = single(imgDepthR);
+imgDepthR = imgDepthR / 255;
+imgDepthR = imgDepthR * 10;
+points3d = depth_plane2depth_world(imgDepthR);
+points3d = depth_world2rgb_world(points3d);
+pcshow(points3d);
+
+************************* 
+From nyu_depth_v2_labeled dataset (adapted from project_depth_map.m)
+*************************
+data = load('nyu_depth_v2_labeled.mat');
+rgb = data.images(:,:,:,1);
+imgDepth = data.depths(:,:,1);  % depth image of float, NOT uint16 (unlike the normal dataset)
+
+% imgDepth = load('./data/nyu_depth_v2_labeled/depth/train/71.mat');
+% imgDepth = imgDepth.depth;
+% rgb = imread('./data/nyu_depth_v2_labeled/rgb/train/71.jpg');
+
+camera_params;
+[H, W] = size(imgDepth);
+
+kc_d = [k1_d, k2_d, p1_d, p2_d, k3_d];
+fc_d = [fx_d,fy_d];
+cc_d = [cx_d,cy_d]; 
+
+
+fc_rgb = [fx_rgb,fy_rgb];
+cc_rgb = [cx_rgb,cy_rgb]; 
+kc_rgb = [k1_rgb,k2_rgb,p1_rgb,p2_rgb,k3_rgb];
+
+rgbUndistorted = zeros(size(rgb));
+
+for ii = 1 : size(rgb,3)
+rgbUndistorted(:,:,ii) = undistort(double(rgb(:,:,ii)), ...
+    fc_rgb, cc_rgb, kc_rgb, 0);
+end
+
+rgbUndistorted = uint8(rgbUndistorted);
+
+points3d = depth_plane2depth_world(imgDepth);
+points3d = depth_world2rgb_world(points3d);
+
+% save or run pcshow(points3d)
+
+************************* 
+From normal dataset (from project_depth_map.m)
+*************************
+imgDepth = imread('./data/dd.pgm');  % uint16 file
+imgDepth = swapbytes(imgDepth);
+rgb = imread('./data/rr.ppm');
+
+camera_params;
+[H, W] = size(imgDepth);
+
+kc_d = [k1_d, k2_d, p1_d, p2_d, k3_d];
+fc_d = [fx_d,fy_d];
+cc_d = [cx_d,cy_d]; 
+
+
+fc_rgb = [fx_rgb,fy_rgb];
+cc_rgb = [cx_rgb,cy_rgb]; 
+kc_rgb = [k1_rgb,k2_rgb,p1_rgb,p2_rgb,k3_rgb];
+
+rgbUndistorted = zeros(size(rgb));
+
+for ii = 1 : size(rgb,3)
+rgbUndistorted(:,:,ii) = undistort(double(rgb(:,:,ii)), ...
+    fc_rgb, cc_rgb, kc_rgb, 0);
+end
+
+rgbUndistorted = uint8(rgbUndistorted);
+
+noiseMask = 255 * double(imgDepth == max(imgDepth(:)));
+
+% Undistort the noise mask.
+noiseMask = undistort(noiseMask, fc_d, cc_d, kc_d, 0);
+noiseMask = noiseMask > 0;
+
+imgDepth = undistort_depth(double(imgDepth),fc_d,cc_d,kc_d,0, noiseMask);
+
+% Fix issues introduced by distortion.
+imgDepth(imgDepth < 600) = 2047;
+imgDepth(noiseMask) = 2047;
+
+depth2 = depth_rel2depth_abs(imgDepth);
+points3d = depth_plane2depth_world(depth2);
+points3d = depth_world2rgb_world(points3d);
